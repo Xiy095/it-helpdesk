@@ -1,31 +1,54 @@
-// База данных в JSON (хранится в localStorage)
-let tickets = JSON.parse(localStorage.getItem('tickets')) || [];
+// Инициализация Supabase
+const supabaseUrl = 'https://jsj@appf.gijtsverix.supabase.co';
+const supabaseKey = 'ey3hb6c101J7UzI1N1IsInR5ccT6TkpXVCJ9, ey3pc3H1012zdX8hYmFZZSIsInJlZ11GTrf';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // Создание заявки
-document.getElementById('ticketForm').addEventListener('submit', function(e) {
+document.getElementById('ticketForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const ticket = {
-        id: Date.now(),
-        title: document.getElementById('title').value,
-        description: document.getElementById('description').value,
-        priority: document.getElementById('priority').value,
-        status: 'open',
-        created: new Date().toLocaleString('ru-RU')
-    };
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const priority = document.getElementById('priority').value;
     
-    tickets.push(ticket);
-    localStorage.setItem('tickets', JSON.stringify(tickets));
-    renderTickets();
-    this.reset();
-    alert('✅ Заявка создана!');
+    // Создаем заявку в Supabase
+    const { data, error } = await supabase
+        .from('tickets')
+        .insert([
+            {
+                title: title,
+                description: description,
+                priority: priority,
+                status: 'open',
+                user_email: 'user@example.com' // временно
+            }
+        ])
+        .select();
+    
+    if (error) {
+        alert('Ошибка: ' + error.message);
+    } else {
+        alert('✅ Заявка создана в базе данных!');
+        renderTickets();
+        this.reset();
+    }
 });
 
-// Отображение заявок
-function renderTickets() {
+// Загрузка и отображение заявок
+async function renderTickets() {
+    const { data: tickets, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .order('created_at', { ascending: false });
+    
+    if (error) {
+        console.error('Ошибка:', error);
+        return;
+    }
+    
     const container = document.getElementById('ticketsContainer');
     
-    if (tickets.length === 0) {
+    if (!tickets || tickets.length === 0) {
         container.innerHTML = '<p>Заявок пока нет</p>';
         return;
     }
@@ -36,31 +59,43 @@ function renderTickets() {
             <div class="ticket-meta">
                 🔥 Приоритет: ${getPriorityText(ticket.priority)} | 
                 📊 Статус: <span class="ticket-status status-${ticket.status}">${getStatusText(ticket.status)}</span> |
-                📅 Создана: ${ticket.created}
+                📅 Создана: ${new Date(ticket.created_at).toLocaleString('ru-RU')}
             </div>
             <p>${ticket.description}</p>
             <button onclick="changeStatus(${ticket.id}, 'in-progress')">В работу</button>
             <button onclick="changeStatus(${ticket.id}, 'resolved')">Решено</button>
-            <button onclick="deleteTicket(${ticket.id})" class="delete-btn">Удалить</button>
+            <button onclick="deleteTicket('${ticket.id}')" class="delete-btn">Удалить</button>
         </div>
     `).join('');
 }
 
 // Смена статуса
-function changeStatus(ticketId, newStatus) {
-    tickets = tickets.map(ticket => 
-        ticket.id === ticketId ? {...ticket, status: newStatus} : ticket
-    );
-    localStorage.setItem('tickets', JSON.stringify(tickets));
-    renderTickets();
+async function changeStatus(ticketId, newStatus) {
+    const { error } = await supabase
+        .from('tickets')
+        .update({ status: newStatus })
+        .eq('id', ticketId);
+    
+    if (error) {
+        alert('Ошибка: ' + error.message);
+    } else {
+        renderTickets();
+    }
 }
 
 // Удаление заявки
-function deleteTicket(ticketId) {
+async function deleteTicket(ticketId) {
     if (confirm('Удалить заявку?')) {
-        tickets = tickets.filter(ticket => ticket.id !== ticketId);
-        localStorage.setItem('tickets', JSON.stringify(tickets));
-        renderTickets();
+        const { error } = await supabase
+            .from('tickets')
+            .delete()
+            .eq('id', ticketId);
+        
+        if (error) {
+            alert('Ошибка: ' + error.message);
+        } else {
+            renderTickets();
+        }
     }
 }
 
