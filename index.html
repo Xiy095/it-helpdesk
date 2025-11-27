@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Helpdesk System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎫 IT Helpdesk System</h1>
+            <p>Система поддержки IT-заявок</p>
+        </header>
+
+        <main>
+            <!-- Форма создания заявки -->
+            <section class="ticket-form">
+                <h2>Создать новую заявку</h2>
+                <form id="ticketForm">
+                    <input type="text" id="title" placeholder="Тема заявки" required>
+                    <textarea id="description" placeholder="Описание проблемы" required></textarea>
+                    <select id="priority" required>
+                        <option value="">Выберите приоритет</option>
+                        <option value="low">Низкий</option>
+                        <option value="medium">Средний</option>
+                        <option value="high">Высокий</option>
+                        <option value="urgent">Критический</option>
+                    </select>
+                    <button type="submit">Создать заявку</button>
+                </form>
+            </section>
+
+            <!-- Список заявок -->
+            <section class="tickets-list">
+                <h2>Мои заявки</h2>
+                <div id="ticketsContainer">
+                    <!-- Заявки будут здесь -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
