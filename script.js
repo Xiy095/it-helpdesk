@@ -1,7 +1,7 @@
 // script.js
 const SUPABASE_CONFIG = {
-    url: 'https://your-project.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwamdicXBwZmdpamp0b2V3aWx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNDEwOTAsImV4cCI6MjA3OTcxNzA5MH0.64IOlH8jbG1E_1fjBm_NCIthxjdGBIylVWv_S6i9Ld4'
+    url: 'https://wtstat1c-1680w4r.dj3twork3s.supabase.co', 
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0c3RhdDFjLTE2ODB3NHIuZGozdHdvcmszcyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzI5ODQ2NDU0LCJleHAiOjIwNDU0MjI0NTR9.7W8EQ5jFU9g00fe8rla3a9ec4CFpjQ0fca0a5f9Bc44f5DpgJbPEL3rj5a_ACTnwjd8fkjxVWc_5f43rd' 
 };
 
 let supabaseClient = null;
@@ -9,11 +9,12 @@ let supabaseClient = null;
 // Инициализация Supabase
 async function initializeSupabase() {
     try {
+        console.log('Initializing...');
         supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
-        console.log('Supabase initialized successfully');
+        console.log('Supabase ready:', !!supabaseClient);
         return supabaseClient;
     } catch (error) {
-        console.error('Error initializing Supabase:', error);
+        console.error('Supabase initialization error:', error);
         throw error;
     }
 }
@@ -25,17 +26,22 @@ async function loadTickets() {
     }
 
     try {
+        console.log('Loading tickets...');
         const { data, error } = await supabaseClient
             .from('tickets')
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase query error:', error);
+            throw error;
+        }
         
+        console.log('Tickets loaded:', data);
         displayTickets(data || []);
     } catch (error) {
         console.error('Error loading tickets:', error);
-        alert('Ошибка загрузки заявок');
+        alert('Ошибка загрузки заявок: ' + error.message);
     }
 }
 
@@ -62,11 +68,11 @@ async function createTicket(title, description, priority) {
         if (error) throw error;
         
         alert('Заявка создана успешно!');
-        loadTickets(); // Обновляем список
+        loadTickets();
         return data;
     } catch (error) {
         console.error('Error creating ticket:', error);
-        alert('Ошибка создания заявки');
+        alert('Ошибка создания заявки: ' + error.message);
     }
 }
 
@@ -115,9 +121,13 @@ function getStatusText(status) {
 
 // Обработчик формы
 document.addEventListener('DOMContentLoaded', function() {
-    // Инициализируем Supabase при загрузке страницы
+    console.log('DOM loaded');
+    
     initializeSupabase().then(() => {
+        console.log('Loading tickets after init...');
         loadTickets();
+    }).catch(error => {
+        console.error('Failed to initialize:', error);
     });
 
     const form = document.getElementById('ticketForm');
@@ -134,6 +144,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         await createTicket(title, description, priority);
-        form.reset(); // Очищаем форму
+        form.reset();
     });
 });
