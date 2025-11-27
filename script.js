@@ -1,153 +1,139 @@
-// Конфигурация Supabase
+// script.js
 const SUPABASE_CONFIG = {
-    url: 'https://jsj@appf.gijtsverix.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NIIsinR5cCl6ikpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSlsInJIZil61mpwamdicXBwZmdpamp0b2V3aWx4Ilwicm9sZSl6ImFub24ILCJpYXQIOjE3NjQxNDEwOTAsImV4cCl6MjA3OTcxNzA5MH0.64IQIHgjbGTE_IfjBm_NCIthxjdGBlyLVWv_S619Ld4'
+    url: 'https://your-project.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwamdicXBwZmdpamp0b2V3aWx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNDEwOTAsImV4cCI6MjA3OTcxNzA5MH0.64IOlH8jbG1E_1fjBm_NCIthxjdGBIylVWv_S6i9Ld4'
 };
 
 let supabaseClient = null;
 
 // Инициализация Supabase
-async function initSupabase() {
-    if (window.supabase) {
-        supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
-        return;
-    }
-    
-    // Ждем загрузки библиотеки
-    await new Promise((resolve, reject) => {
-        if (window.supabase) {
-            resolve();
-            return;
-        }
-        
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-        script.onload = () => {
-            console.log('Supabase loaded');
-            supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
-            resolve();
-        };
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
-
-// Создание заявки
-async function handleTicketSubmit(e) {
-    e.preventDefault();
-    
-    if (!supabaseClient) {
-        alert('Система не готова. Подождите...');
-        return;
-    }
-    
-    const title = document.getElementById('title').value;
-    const description = document.getElementById('description').value;
-    const priority = document.getElementById('priority').value;
-    
+async function initializeSupabase() {
     try {
-        const { data, error } = await supabaseClient
-            .from('tickets')
-            .insert([{ title, description, priority, status: 'open', user_email: 'user@example.com' }])
-            .select();
-        
-        if (error) throw error;
-        
-        alert('✅ Заявка создана!');
-        await renderTickets();
-        e.target.reset();
+        supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+        console.log('Supabase initialized successfully');
+        return supabaseClient;
     } catch (error) {
-        alert('Ошибка: ' + error.message);
-        console.error('Supabase error:', error);
+        console.error('Error initializing Supabase:', error);
+        throw error;
     }
 }
 
 // Загрузка заявок
-async function renderTickets() {
-    if (!supabaseClient) return;
-    
+async function loadTickets() {
+    if (!supabaseClient) {
+        await initializeSupabase();
+    }
+
     try {
-        const { data: tickets, error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('tickets')
             .select('*')
             .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
         
-        const container = document.getElementById('ticketsContainer');
-        container.innerHTML = tickets && tickets.length > 0 
-            ? tickets.map(ticket => `
-                <div class="ticket ${ticket.priority}">
-                    <h3>${ticket.title}</h3>
-                    <div class="ticket-meta">
-                        Приоритет: ${getPriorityText(ticket.priority)} | 
-                        Статус: <span class="ticket-status status-${ticket.status}">${getStatusText(ticket.status)}</span> |
-                        Создана: ${new Date(ticket.created_at).toLocaleString('ru-RU')}
-                    </div>
-                    <p>${ticket.description}</p>
-                    <button onclick="changeStatus('${ticket.id}', 'in-progress')">В работу</button>
-                    <button onclick="changeStatus('${ticket.id}', 'resolved')">Решено</button>
-                    <button onclick="deleteTicket('${ticket.id}')" class="delete-btn">Удалить</button>
-                </div>
-            `).join('')
-            : '<p>Заявок пока нет</p>';
+        displayTickets(data || []);
     } catch (error) {
-        console.error('Ошибка загрузки:', error);
-        document.getElementById('ticketsContainer').innerHTML = '<p>Ошибка загрузки заявок</p>';
+        console.error('Error loading tickets:', error);
+        alert('Ошибка загрузки заявок');
     }
 }
 
-// Смена статуса
-async function changeStatus(ticketId, newStatus) {
-    if (!supabaseClient) return;
-    
+// Создание заявки
+async function createTicket(title, description, priority) {
+    if (!supabaseClient) {
+        await initializeSupabase();
+    }
+
     try {
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .from('tickets')
-            .update({ status: newStatus })
-            .eq('id', ticketId);
-        
+            .insert([
+                {
+                    title: title,
+                    description: description,
+                    priority: priority,
+                    status: 'open',
+                    created_at: new Date().toISOString()
+                }
+            ])
+            .select();
+
         if (error) throw error;
-        await renderTickets();
+        
+        alert('Заявка создана успешно!');
+        loadTickets(); // Обновляем список
+        return data;
     } catch (error) {
-        alert('Ошибка: ' + error.message);
+        console.error('Error creating ticket:', error);
+        alert('Ошибка создания заявки');
     }
 }
 
-// Удаление заявки
-async function deleteTicket(ticketId) {
-    if (!supabaseClient || !confirm('Удалить заявку?')) return;
+// Отображение заявок
+function displayTickets(tickets) {
+    const container = document.getElementById('ticketsContainer');
     
-    try {
-        const { error } = await supabaseClient
-            .from('tickets')
-            .delete()
-            .eq('id', ticketId);
-        
-        if (error) throw error;
-        await renderTickets();
-    } catch (error) {
-        alert('Ошибка: ' + error.message);
+    if (tickets.length === 0) {
+        container.innerHTML = '<p>Заявок пока нет</p>';
+        return;
     }
+
+    container.innerHTML = tickets.map(ticket => `
+        <div class="ticket-item ${ticket.priority}">
+            <h3>${ticket.title}</h3>
+            <p>${ticket.description}</p>
+            <div class="ticket-meta">
+                <span class="priority ${ticket.priority}">${getPriorityText(ticket.priority)}</span>
+                <span class="status ${ticket.status}">${getStatusText(ticket.status)}</span>
+                <span class="date">${new Date(ticket.created_at).toLocaleDateString()}</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 // Вспомогательные функции
 function getPriorityText(priority) {
-    const priorities = { low: 'Низкий', medium: 'Средний', high: 'Высокий', urgent: 'Критический' };
+    const priorities = {
+        'low': 'Низкий',
+        'medium': 'Средний', 
+        'high': 'Высокий',
+        'urgent': 'Критический'
+    };
     return priorities[priority] || priority;
 }
 
 function getStatusText(status) {
-    const statuses = { open: 'Открыта', 'in-progress': 'В работе', resolved: 'Решена' };
+    const statuses = {
+        'open': 'Открыта',
+        'in_progress': 'В работе',
+        'resolved': 'Решена',
+        'closed': 'Закрыта'
+    };
     return statuses[status] || status;
 }
 
-// Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('Initializing...');
-    await initSupabase();
-    console.log('Supabase ready:', !!supabaseClient);
-    
-    document.getElementById('ticketForm').addEventListener('submit', handleTicketSubmit);
-    await renderTickets();
+// Обработчик формы
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализируем Supabase при загрузке страницы
+    initializeSupabase().then(() => {
+        loadTickets();
+    });
+
+    const form = document.getElementById('ticketForm');
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById('title').value;
+        const description = document.getElementById('description').value;
+        const priority = document.getElementById('priority').value;
+
+        if (!title || !description || !priority) {
+            alert('Пожалуйста, заполните все поля');
+            return;
+        }
+
+        await createTicket(title, description, priority);
+        form.reset(); // Очищаем форму
+    });
 });
